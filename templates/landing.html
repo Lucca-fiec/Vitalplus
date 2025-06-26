@@ -1,3 +1,4 @@
+<!-- login.html -->
 <!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -14,57 +15,64 @@
       color: #333;
     }
     header {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding-top: 15px;
-  background-color: white;
-  font-family: 'Segoe UI', sans-serif;
-}
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding-top: 15px;
+      background-color: white;
+      font-family: 'Segoe UI', sans-serif;
+    }
 
-.logo {
-  display: flex;
-  align-items: center;
-  font-weight: bold;
-  font-size: 24px;
-  color: #008cba;
-}
+    .logo {
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      font-size: 24px;
+      color: #008cba;
+    }
 
-.logo img {
-  width: 80px;
-  height: auto;
-  margin-inline: 15px;
-}
+    .logo img {
+      width: 80px;
+      height: auto;
+      margin-inline: 15px;
+    }
 
     .form-section {
       background: #ffffff;
       padding-block: 2rem;
-        padding-inline: 2rem;
-        margin-inline: 1.5rem;
+      padding-inline: 2rem;
+      margin-inline: 1.5rem;
       text-align: center;
     }
+
     .form-section h2 {
       margin-bottom: 1rem;
-       color: #2A7BA4;
+      color: #2A7BA4;
     }
+
     label {
-        text-align: left;
+      text-align: left;
     }
-    input { display: block; width: 100%; margin: 10px 0; }
-        input { padding: 8px;}
-        select {padding: 8px}
+
+    input, select {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 8px;
+    }
+
     form button {
-        font-size: 15px;
-        padding-inline: 15px;
-        padding-block: 10px;
+      font-size: 15px;
+      padding: 10px 15px;
       background-color: #ffe36e;
-        border: none;
-        margin-top: 20px;
-  border-radius: 20px;
-  font-weight: bold;
-  color: #111;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border: none;
+      margin-top: 20px;
+      border-radius: 20px;
+      font-weight: bold;
+      color: #111;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
+
     footer {
       background: #004d4d;
       color: white;
@@ -74,39 +82,26 @@
   </style>
 </head>
 <body>
-  <header>
+<header>
   <div class="logo">
     <img src="{{ url_for('static', filename='VitaPlus.logo.png') }}" alt="Logo">
   </div>
 </header>
 
-  <section class="form-section">
-    <h2>Login / Registro</h2>
-    <form action="/login" method="get">
-  <label for="usuario">Nome de usuário:</label>
-  <input type="text" name="usuario" placeholder="Nome de usuário" required>
+<section class="form-section">
+  <h2>Login / Registro</h2>
+  <form action="/login" method="get">
+    <label for="usuario">Nome de usuário:</label>
+    <input type="text" name="usuario" placeholder="Nome de usuário" required>
 
-  <label for="email">Email:</label>
-  <input type="email" name="email" placeholder="E-mail" required>
+    <label for="email">Email:</label>
+    <input type="email" name="email" placeholder="E-mail" required>
 
-  <label for="senha">Senha:</label>
-  <input type="password" name="senha" placeholder="Senha" required>
+    <label for="senha">Senha:</label>
+    <input type="password" name="senha" placeholder="Senha" required>
 
-  <button type="submit">Entrar</button>
-</form>
-  </section>
-<script>
-  const toggle = document.querySelector('.menu-toggle');
-  const menu = document.querySelector('nav.menu');
-  const closeBtn = document.querySelector('.close-menu');
-  toggle.addEventListener('click', () => menu.classList.toggle('active'));
-  closeBtn.addEventListener('click', () => menu.classList.remove('active'));
-
-  function mostrarCampos() {
-    const tipo = document.getElementById('tipo').value;
-    document.getElementById('campo-especialidade').style.display = (tipo === 'Consulta') ? 'block' : 'none';
-    document.getElementById('campo-exame').style.display = (tipo === 'Exame') ? 'block' : 'none';
-  }
-</script>
+    <button type="submit">Entrar</button>
+  </form>
+</section>
 </body>
 </html>

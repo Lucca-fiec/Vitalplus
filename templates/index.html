@@ -16,6 +16,7 @@
     <button class="close-menu">&times;</button>
     <a href="/">Home</a>
     <a href="/agendamento">Agende já</a>
+      <a href="/postos">Postos disponíveis</a>
     <a href="#" class="contact-btn">Suporte</a>
   </nav>
 </header>
@@ -41,13 +42,6 @@
         <option value="{{ h }}">{{ h }}</option>
       {% endfor %}
     </select>
-
-    <label>Plano de Saúde:</label>
-<select name="plano_saude" required>
-  {% for plano in planos_saude %}
-    <option value="{{ plano }}">{{ plano }}</option>
-  {% endfor %}
-</select>
 
     <label>Tipo de atendimento:</label>
     <select name="tipo" id="tipo" required onchange="mostrarCampos()">
