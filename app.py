@@ -18,24 +18,14 @@ def init_db():
                 data TEXT NOT NULL,
                 horario TEXT NOT NULL,
                 tipo TEXT NOT NULL,
-                plano_saude TEXT NOT NULL,
                 especialidade TEXT,
                 tipo_exame TEXT
             )
         ''')
 
-# Endereços genéricos por plano
-enderecos_planos = {
-    "SUS": "Unidade Básica de Saúde Central – Rua 13 de Maio, 55, Indaiatuba-SP",
-    "Unimed": "Centro Médico Unimed – Av. Conceição, 1020, Indaiatuba-SP",
-    "Bradesco Saúde": "Clínica Vida Bradesco – Rua Humaitá, 140, Indaiatuba-SP",
-    "Amil": "Amil Saúde Center – Av. Francisco de Paula Leite, 880, Indaiatuba-SP",
-    "Outro": "Policlínica Vital – Rua das Rosas, 300, Indaiatuba-SP"
-}
-
 @app.route('/')
 def landing():
-    return render_template('landing.html')
+    return render_template('landing.html')  # Página inicial = landing
 
 @app.route('/login', methods=['GET'])
 def login():
@@ -46,10 +36,14 @@ def login():
     if usuario and email and senha:
         session['usuario'] = usuario
         session['email'] = email
-        return redirect('/agendamento')
+        return redirect('/postos')
     else:
         flash('Preencha todos os campos do login!', 'erro')
-        return render_template('login.html')
+        return render_template('landing.html')
+
+@app.route('/postos')
+def postos():
+    return render_template('postos.html')
 
 @app.route('/agendamento', methods=['GET', 'POST'])
 def index():
@@ -58,85 +52,114 @@ def index():
         return redirect('/login')
 
     email_usuario = session['email']
-
     horarios_disponiveis = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00']
     especialidades = ['Clínico Geral', 'Pediatria', 'Cardiologia', 'Dermatologia']
     tipos_exame = ['Sangue', 'Urina', 'Raio-X', 'Ultrassom']
-    planos_saude = ['SUS', 'Unimed', 'Bradesco Saúde', 'Amil', 'Outro']
 
     if request.method == 'POST':
         data_str = request.form.get('data', '').strip()
         tipo = request.form.get('tipo', '').strip()
         horario = request.form.get('horario', '').strip()
-        plano = request.form.get('plano_saude', '').strip()
         especialidade = request.form.get('especialidade', '').strip()
         tipo_exame = request.form.get('tipo_exame', '').strip()
 
-        if not data_str or not tipo or not horario or not plano:
+        if not data_str or not tipo or not horario:
             flash('Preencha todos os campos obrigatórios!', 'erro')
         else:
             try:
                 data_consulta = datetime.strptime(data_str, '%Y-%m-%d').date()
                 hoje = date.today()
 
-                # ❗ Bloqueio de data anterior à hoje e superior a 2025
                 if data_consulta < hoje:
                     flash('A data não pode ser anterior à data atual.', 'erro')
                 elif data_consulta.year > 2025:
-                    flash('A data não pode ser posterior ao ano de 2025.', 'erro')
+                    flash('A data não pode ser superior a 2025.', 'erro')
                 else:
                     with sqlite3.connect(DB) as conn:
                         cursor = conn.cursor()
-                        erro_encontrado = False
+                        erro = False
 
-                        # ❗ 1 agendamento por horário
+                        # Impede múltiplos agendamentos no mesmo horário para o mesmo usuário
                         cursor.execute("""
                             SELECT COUNT(*) FROM agendamentos
-                            WHERE data = ? AND horario = ?
-                        """, (data_str, horario))
-                        if cursor.fetchone()[0] >= 1:
-                            flash('Já existe um agendamento neste horário.', 'erro')
-                            erro_encontrado = True
+                            WHERE data = ? AND horario = ? AND email = ?
+                        """, (data_str, horario, email_usuario))
+                        if cursor.fetchone()[0] > 0:
+                            flash('Você já possui um agendamento neste horário.', 'erro')
+                            erro = True
 
-                        # ❗ 1 subtipo de consulta por dia
-                        if tipo == 'Consulta':
+                        # Vacina - 1 por dia por email + limite de 5 no horário
+                        if tipo == 'Vacina':
                             cursor.execute("""
                                 SELECT COUNT(*) FROM agendamentos
-                                WHERE data = ? AND tipo = 'Consulta' AND especialidade = ?
-                            """, (data_str, especialidade))
-                            if cursor.fetchone()[0] >= 1:
-                                flash('Já existe uma consulta dessa especialidade neste dia.', 'erro')
-                                erro_encontrado = True
+                                WHERE email = ? AND data = ? AND tipo = 'Vacina'
+                            """, (email_usuario, data_str))
+                            if cursor.fetchone()[0] > 0:
+                                flash('Você já agendou uma vacinação neste dia.', 'erro')
+                                erro = True
+                            else:
+                                cursor.execute("""
+                                    SELECT COUNT(*) FROM agendamentos
+                                    WHERE data = ? AND horario = ? AND tipo = 'Vacina'
+                                """, (data_str, horario))
+                                if cursor.fetchone()[0] >= 5:
+                                    flash('Limite de vacinações neste horário atingido.', 'erro')
+                                    erro = True
 
-                        # ❗ 1 subtipo de exame por dia
+                        # Consulta - apenas 1 por subtipo por horário
+                        elif tipo == 'Consulta':
+                            cursor.execute("""
+                                SELECT COUNT(*) FROM agendamentos
+                                WHERE data = ? AND horario = ? AND tipo = 'Consulta' AND especialidade = ?
+                            """, (data_str, horario, especialidade))
+                            if cursor.fetchone()[0] > 0:
+                                flash('Já existe uma consulta dessa especialidade neste horário.', 'erro')
+                                erro = True
+
+                        # Exame - 1 por subtipo por dia por email + até 5 no mesmo horário
                         elif tipo == 'Exame':
                             cursor.execute("""
                                 SELECT COUNT(*) FROM agendamentos
-                                WHERE data = ? AND tipo = 'Exame' AND tipo_exame = ?
-                            """, (data_str, tipo_exame))
-                            if cursor.fetchone()[0] >= 1:
-                                flash('Já existe um exame deste tipo neste dia.', 'erro')
-                                erro_encontrado = True
+                                WHERE email = ? AND data = ? AND tipo = 'Exame' AND tipo_exame = ?
+                            """, (email_usuario, data_str, tipo_exame))
+                            if cursor.fetchone()[0] > 0:
+                                flash('Você já agendou esse tipo de exame neste dia.', 'erro')
+                                erro = True
+                            else:
+                                cursor.execute("""
+                                    SELECT COUNT(*) FROM agendamentos
+                                    WHERE data = ? AND horario = ? AND tipo = 'Exame' AND tipo_exame = ?
+                                """, (data_str, horario, tipo_exame))
+                                if cursor.fetchone()[0] >= 5:
+                                    flash('Limite de agendamentos deste exame neste horário atingido.', 'erro')
+                                    erro = True
 
-                        if not erro_encontrado:
+                        if not erro:
                             cursor.execute("""
-                                INSERT INTO agendamentos (nome, email, data, horario, tipo, plano_saude, especialidade, tipo_exame)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                            """, (session.get('usuario', ''), email_usuario, data_str, horario, tipo, plano, especialidade, tipo_exame))
+                                INSERT INTO agendamentos
+                                (nome, email, data, horario, tipo, especialidade, tipo_exame)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                session.get('usuario', ''),
+                                email_usuario,
+                                data_str,
+                                horario,
+                                tipo,
+                                especialidade if tipo == 'Consulta' else '',
+                                tipo_exame if tipo == 'Exame' else ''
+                            ))
                             conn.commit()
 
-                            endereco = enderecos_planos.get(plano, "Unidade de Atendimento – Indaiatuba-SP")
-                            flash(f'{tipo} agendado com sucesso! Compareça em: {endereco}', 'sucesso')
+                            flash(f'{tipo} agendado com sucesso! Comparecer na Unidade de Saúde de Indaiatuba.', 'sucesso')
                             return redirect('/agendamento')
 
             except ValueError:
-                flash('Formato de data inválido. Use o formato AAAA-MM-DD.', 'erro')
+                flash('Formato de data inválido. Use AAAA-MM-DD.', 'erro')
 
     return render_template('index.html',
                            horarios=horarios_disponiveis,
                            especialidades=especialidades,
                            tipos_exame=tipos_exame,
-                           planos_saude=planos_saude,
                            usuario=session.get('usuario', ''),
                            email=email_usuario)
 
